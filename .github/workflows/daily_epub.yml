@@ -1,0 +1,39 @@
+name: Daily EPUB Generator
+
+on:
+  schedule:
+    # UTC 时间 19:30 = 北京时间次日 3:30
+    - cron: '30 19 * * *'
+  workflow_dispatch:  # 支持手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run fetcher
+        run: python fetch_articles.py
+
+      - name: Commit and push EPUB files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add doc/*.epub 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Add daily EPUB $(date +'%Y-%m-%d')"
+          git push
